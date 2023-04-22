@@ -1,8 +1,5 @@
 from ansys.mapdl.core import launch_mapdl
-from ansys.mapdl.reader.rst import Result
-from helper import Beam, Node, assess_for_breaks
-
-
+from helper import Beam, Node, assess_for_breaks, plot
 
 
 # start mapdl and clear it
@@ -13,8 +10,9 @@ mapdl.prep7()
 
 mapdl.antype("STATIC")
 mapdl.et(1, "BEAM188")
-mapdl.sectype(1, "BEAM", "CSOLID")
-mapdl.secdata(.01)
+mapdl.sectype(1, "BEAM", "RECT")
+mapdl.secdata(0.01, 0.01)
+
 # ice
 # Young's Modulus = 10 GPa
 # Poisson's ratio = 0.33
@@ -46,7 +44,7 @@ node_pairings = [(1, 2), (2, 3), (3, 4), (4, 5),
                  (5, 6), (6, 7), (7, 8), (8, 9),
                  (9, 10), (10, 11), (12, 2), (13, 10)]
 
-elements = [mapdl.e(*pair) for pair in node_pairings]
+elements = [Beam(*pair, mapdl.e(*pair)) for pair in node_pairings]
 
 mapdl.eplot(show_node_numbering=True, cpos="xy")
 
@@ -54,23 +52,15 @@ mapdl.eplot(show_node_numbering=True, cpos="xy")
 mapdl.nsel("ALL")
 for n in [1, 12, 11, 13]:
     mapdl.d(n, "ALL")
-mapdl.f(5, "FY", -20)
-mapdl.f(6, "FY", -20)
-mapdl.f(7, "FY", -20)
+mapdl.f(6, "FY", -60)
 mapdl.finish()
 
 mapdl.run("/SOLU")
-# mapdl.outres("ALL", "ALL")
 mapdl.solve()
 mapdl.finish()
 mapdl.post1()
 
-simulation_result = mapdl.result  # type: Result
-
-
 does_it_break, output = assess_for_breaks(mapdl, elements, yield_strength)
-simulation_result.plot_nodal_stress(0, 'XY', cpos='xy', cmap='magma')
-mapdl.finish()
-mapdl.exit()
-
+plot(elements, nodes, yield_strength)
 print(output)
+mapdl.exit()
