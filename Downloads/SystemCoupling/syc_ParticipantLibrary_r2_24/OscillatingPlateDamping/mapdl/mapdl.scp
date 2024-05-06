@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CouplingParticipant>
+  <ExecutionControl>
+    <InitialInput>ds.dat</InitialInput>
+  </ExecutionControl>  
+  <CosimulationControl>
+    <Type>MAPDL</Type>
+    <AnalysisType>Transient</AnalysisType>
+    <DisplayName>Structural</DisplayName>
+    <Variables>
+      <Variable>
+        <Name>FORC</Name>
+        <QuantityType>Force</QuantityType>
+      </Variable>
+      <Variable>
+        <Name>INCD</Name>
+        <QuantityType>Incremental Displacement</QuantityType>
+      </Variable>
+    </Variables>
+    <Regions>
+      <Region>
+        <Topology>Surface</Topology>
+        <Name>FSIN_1</Name>
+        <OutputVariables>
+          <Variable>INCD</Variable>
+        </OutputVariables>
+        <InputVariables>
+          <Variable>FORC</Variable>
+        </InputVariables>
+      </Region>
+    </Regions>
+  </CosimulationControl>
+</CouplingParticipant>

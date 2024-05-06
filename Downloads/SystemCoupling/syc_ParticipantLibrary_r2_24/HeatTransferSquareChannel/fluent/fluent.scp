@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CouplingParticipant>
+    <ExecutionControl>
+        <InitialInput>fluent</InitialInput>
+    </ExecutionControl>
+    <CosimulationControl>
+        <Type>FLUENT</Type>
+        <AnalysisType>Steady</AnalysisType>
+        <DisplayName>Fluid Flow (Fluent)</DisplayName>
+        <Regions>
+            <Region>
+                <Name>sc</Name>
+                <DisplayName>sc</DisplayName>
+                <Topology>Surface</Topology>
+                <InputVariables>
+                    <Variable>heatflow</Variable>
+                </InputVariables>
+                <OutputVariables>
+                    <Variable>temperature</Variable>
+                </OutputVariables>
+            </Region>
+        </Regions>
+        <Variables>
+            <Variable>
+                <Name>heatflow</Name>
+                <DisplayName>heatflow</DisplayName>
+                <QuantityType>Heat Rate</QuantityType>
+                <Location>Element</Location>
+            </Variable>
+            <Variable>
+                <Name>temperature</Name>
+                <DisplayName>temperature</DisplayName>
+                <QuantityType>Temperature</QuantityType>
+                <Location>Node</Location>
+            </Variable>
+        </Variables>
+    </CosimulationControl>
+</CouplingParticipant>
