@@ -69,6 +69,11 @@ permissions:
 API Reference: https://iam.ansys.com/swagger/AnsysId/swagger.json
 """
 
+__version__ = "1.1.0"
+# Changelog:
+#   1.1.0 - Disabled Entra ID accounts are now excluded from sync.
+#   1.0.0 - Initial release.
+
 import sys
 import json
 import asyncio
@@ -727,13 +732,22 @@ def _graph_headers(entra_domain: str, client_id: str,
 def entra_email(member: dict) -> str | None:
     """
     Returns the primary SMTP address (mail attribute) only.
-    UPN is NOT used as a fallback. Members without a mail address
-    are skipped with a warning and recorded in _sync_summary["skipped"].
+    Disabled accounts and members without a mail address are skipped
+    with a warning and recorded in _sync_summary["skipped"].
     """
+    display = member.get("displayName", "<unknown>")
+    uid     = member.get("id", "<unknown>")
+
+    if member.get("accountEnabled") is False:
+        log.warning(
+            "Skipping member '%s' (id: %s) — account is disabled in Entra.",
+            display, uid,
+        )
+        _sync_summary["skipped"].append(f"{display} ({uid}) [disabled]")
+        return None
+
     email = member.get("mail")
     if not email:
-        display = member.get("displayName", "<unknown>")
-        uid     = member.get("id", "<unknown>")
         log.warning(
             "Skipping member '%s' (id: %s) — no primary email (mail) "
             "attribute set in Entra. Ensure all group members have a "
@@ -782,7 +796,7 @@ def get_entra_group_members(entra_domain: str, group_name: str,
     members: list[dict] = []
     next_url = (
         f"{GRAPH_BASE}/groups/{group_id}/transitiveMembers"
-        "?$select=displayName,mail,userPrincipalName,id"
+        "?$select=displayName,mail,userPrincipalName,id,accountEnabled"
         "&$top=999"
     )
     while next_url:
@@ -795,14 +809,18 @@ def get_entra_group_members(entra_domain: str, group_name: str,
         )
         next_url = data.get("@odata.nextLink")
 
-    # Filter to only members with a primary email; entra_email() logs skips
-    valid   = [m for m in members if entra_email(m)]
-    skipped = len(members) - len(valid)
+    # Filter to only enabled members with a primary email; entra_email() logs skips
+    skipped_before = len(_sync_summary["skipped"])
+    valid          = [m for m in members if entra_email(m)]
+    no_mail_skips  = len(_sync_summary["skipped"]) - skipped_before - sum(
+        1 for m in members
+        if m.get("accountEnabled") is False
+    )
 
-    if skipped:
+    if no_mail_skips > 0:
         log.warning(
             "%d member(s) skipped due to missing mail attribute. "
-            "They will not be synced.", skipped,
+            "They will not be synced.", no_mail_skips,
         )
     if not valid:
         raise RuntimeError(
@@ -812,7 +830,7 @@ def get_entra_group_members(entra_domain: str, group_name: str,
 
     log.info(
         "Retrieved %d eligible member(s) from Entra group (%d skipped).",
-        len(valid), skipped,
+        len(valid), len(members) - len(valid),
     )
     return valid
 

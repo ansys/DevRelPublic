@@ -106,6 +106,12 @@
         -SmtpFrom          'ansys-sync@contoso.com' `
         -LogRecipient      'it-admin@contoso.com' `
         -WarnRecipient     'it-alerts@contoso.com'
+
+.NOTES
+    Version: 1.1.0
+    Changes:
+      1.1.0 - Disabled Entra ID accounts are now excluded from sync.
+      1.0.0 - Initial release.
 #>
 
 [CmdletBinding()]
@@ -440,7 +446,7 @@ function Get-EntraGroupMembers {
 
     # Page through transitive members
     $members = [System.Collections.Generic.List[object]]::new()
-    $nextUri = "$GraphBase/groups/$groupId/transitiveMembers?`$select=displayName,mail,userPrincipalName,id&`$top=999"
+    $nextUri = "$GraphBase/groups/$groupId/transitiveMembers?`$select=displayName,mail,userPrincipalName,id,accountEnabled&`$top=999"
 
     while ($nextUri) {
         $page = Invoke-RestMethod -Uri $nextUri -Headers $headers -Method GET
@@ -453,9 +459,20 @@ function Get-EntraGroupMembers {
         $nextUri = Get-SafeProperty $page '@odata.nextLink'
     }
 
-    # Filter to members with a primary email (mail attribute) only
-    $valid = [System.Collections.Generic.List[object]]::new()
+    # Filter out disabled accounts first, then members with no mail attribute
+    $valid        = [System.Collections.Generic.List[object]]::new()
+    $noMailCount  = 0
     foreach ($m in $members) {
+        $display = Get-SafeProperty $m 'displayName' '<unknown>'
+        $uid     = Get-SafeProperty $m 'id' '<unknown>'
+
+        $enabled = Get-SafeProperty $m 'accountEnabled' $true
+        if ($enabled -eq $false) {
+            Write-Log WARNING "Skipping member '$display' (id: $uid) -- account is disabled in Entra."
+            $script:Summary.Skipped.Add("$display ($uid) [disabled]")
+            continue
+        }
+
         if (Get-SafeProperty $m 'mail') {
             $valid.Add(@{
                 displayName       = Get-SafeProperty $m 'displayName' '<unknown>'
@@ -465,22 +482,17 @@ function Get-EntraGroupMembers {
             })
         }
         else {
-            $display = Get-SafeProperty $m 'displayName' '<unknown>'
-            $uid     = Get-SafeProperty $m 'id' '<unknown>'
             Write-Log WARNING "Skipping member '$display' (id: $uid) -- no primary email (mail) attribute set in Entra."
             $script:Summary.Skipped.Add("$display ($uid)")
+            $noMailCount++
         }
     }
 
-    $skippedCount = $members.Count - $valid.Count
-    if ($skippedCount -gt 0) {
-        Write-Log WARNING "$skippedCount member(s) skipped due to missing mail attribute. They will not be synced."
-    }
-    if ($valid.Count -eq 0) {
-        throw "No members with a primary email address found in Entra group '$EntraGroup'. Sync aborted."
+    if ($noMailCount -gt 0) {
+        Write-Log WARNING "$noMailCount member(s) skipped due to missing mail attribute. They will not be synced."
     }
 
-    Write-Log INFO "Retrieved $($valid.Count) eligible member(s) from Entra group ($($skippedCount) skipped)."
+    Write-Log INFO "Retrieved $($valid.Count) eligible member(s) from Entra group ($($members.Count - $valid.Count) skipped)."
     return $valid
 }
 
