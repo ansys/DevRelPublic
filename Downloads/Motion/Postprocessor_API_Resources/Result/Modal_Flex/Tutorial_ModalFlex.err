@@ -1,9 +1,0 @@
-ANSYS MOTION 2025 R1     25.10.41029 (build.88dd8299)      Tue Mar 18 11:12:57 2025 AM
-
- *** WARNING ***                                           Tue Mar 18 11:12:58 2025 AM
- A constraint close to a redundant constraint was detected during velocity analysis.
- Check the constraints below carefully.
- -----------------------------------------------------------------
-  REVOLUTE JOINT ID = 1 | TRA.X | /Tutorial_ModalFlex/RJ_02
-  REVOLUTE JOINT ID = 2 | TRA.X | /Tutorial_ModalFlex/RJ_03
- -----------------------------------------------------------------
