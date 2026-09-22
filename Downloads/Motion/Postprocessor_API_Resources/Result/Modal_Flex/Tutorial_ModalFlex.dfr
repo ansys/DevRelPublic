@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<DFRInfo>
+  <MajorVersion Value="25"/>
+  <MinorVersion Value="0"/>
+  <DFMType Value="0"/>
+  <DFGType Value="0"/>
+  <RESType Value="0"/>
+  <Primary Value="Dynamics"/>
+  <Secondary Value="Eigenvalue"/>
+</DFRInfo>
